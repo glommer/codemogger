@@ -28,6 +28,8 @@ const ALWAYS_IGNORE = new Set([
   ".mypy_cache",
   ".cargo",
   ".rustup",
+  "deps",
+  "_build",
 ]);
 
 /** Parse .gitignore-style patterns (simplified: directory names only) */

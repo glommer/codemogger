@@ -115,7 +115,7 @@ Incremental: only changed files (by SHA-256 hash) are re-processed on subsequent
 
 ## Languages
 
-Rust, C, C++, Go, Python, Zig, Java, Scala, JavaScript, TypeScript, TSX, PHP, Ruby.
+Rust, C, C++, Go, Python, Zig, Java, Scala, JavaScript, TypeScript, TSX, PHP, Ruby, Elixir.
 
 ## Benchmarks
 

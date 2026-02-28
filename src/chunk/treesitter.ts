@@ -30,8 +30,95 @@ async function getLanguage(config: LanguageConfig): Promise<Language> {
   return lang
 }
 
+// Elixir call targets that represent definitions
+const ELIXIR_DEFINITIONS = new Set([
+  "defmodule", "defprotocol", "defimpl",
+  "def", "defp", "defmacro", "defmacrop", "defguard", "defguardp", "defdelegate",
+  "defstruct", "defexception",
+  "schema", "embedded_schema",
+])
+const ELIXIR_CONTAINERS = new Set(["defmodule", "defprotocol", "defimpl"])
+
+/** Get the Elixir call target identifier (e.g., "def", "defmodule") */
+function elixirCallTarget(node: SyntaxNode): string | null {
+  if (node.type !== "call") return null
+  const target = node.childForFieldName("target")
+  if (target?.type === "identifier") return target.text
+  return null
+}
+
+/** Extract name from an Elixir call node */
+function extractElixirName(node: SyntaxNode): string {
+  const target = elixirCallTarget(node)
+  if (!target) return ""
+  const args = node.namedChildren.find(c => c.type === "arguments")
+  if (!args) {
+    // embedded_schema has no arguments, just a do_block
+    if (target === "schema" || target === "embedded_schema") return target
+    return ""
+  }
+
+  if (target === "defmodule" || target === "defprotocol") {
+    const alias = args.namedChildren.find(c => c.type === "alias")
+    if (alias) return alias.text
+  } else if (target === "defimpl") {
+    const alias = args.namedChildren.find(c => c.type === "alias")
+    const keywords = args.namedChildren.find(c => c.type === "keywords")
+    if (alias && keywords) {
+      const forPair = keywords.namedChildren.find(c => c.type === "pair")
+      const forValue = forPair?.namedChildren.find(c => c.type === "alias")
+      if (forValue) return `${alias.text} for ${forValue.text}`
+    }
+    if (alias) return alias.text
+  } else if (target === "defstruct" || target === "defexception") {
+    return target
+  } else if (target === "schema" || target === "embedded_schema") {
+    return target
+  } else {
+    // def/defp/defmacro/defguard: first arg is a call node whose target is the function name
+    const fnCall = args.namedChildren.find(c => c.type === "call")
+    if (fnCall) {
+      const fnTarget = fnCall.childForFieldName("target")
+      if (fnTarget) return fnTarget.text
+    }
+    // defguard with binary_operator (when clause): is_admin(user) when ...
+    const binOp = args.namedChildren.find(c => c.type === "binary_operator")
+    if (binOp) {
+      const innerCall = binOp.namedChildren.find(c => c.type === "call")
+      if (innerCall) {
+        const fnTarget = innerCall.childForFieldName("target")
+        if (fnTarget) return fnTarget.text
+      }
+    }
+    // Simple identifier arg (e.g. def to_string(data) without parens)
+    const ident = args.namedChildren.find(c => c.type === "identifier")
+    if (ident) return ident.text
+  }
+  return ""
+}
+
+/** Map Elixir call target to a normalized kind */
+function elixirKind(target: string): string {
+  if (target === "defmodule") return "module"
+  if (target === "defprotocol") return "protocol"
+  if (target === "defimpl") return "impl"
+  if (target === "def" || target === "defp") return "function"
+  if (target === "defmacro" || target === "defmacrop") return "macro"
+  if (target === "defguard" || target === "defguardp") return "guard"
+  if (target === "defdelegate") return "function"
+  if (target === "defstruct") return "struct"
+  if (target === "defexception") return "struct"
+  if (target === "schema" || target === "embedded_schema") return "schema"
+  return target
+}
+
 /** Extract the name from a tree-sitter node (e.g., function name, struct name) */
 function extractName(node: SyntaxNode): string {
+  // Elixir call nodes: extract name based on call target
+  if (node.type === "call") {
+    const target = elixirCallTarget(node)
+    if (target && ELIXIR_DEFINITIONS.has(target)) return extractElixirName(node)
+  }
   // Unwrap export to get inner declaration first
   if (node.type === "export_statement") {
     const inner = unwrapExport(node)
@@ -279,6 +366,20 @@ export async function chunkFile(
       }
     }
 
+    // Elixir: all definitions are `call` nodes — filter by target identifier
+    if (config.name === "elixir" && node.type === "call") {
+      const target = elixirCallTarget(node)
+      if (!target || !ELIXIR_DEFINITIONS.has(target)) return
+      const kind = elixirKind(target)
+      const lineCount = node.endPosition.row - node.startPosition.row + 1
+      if (lineCount <= MAX_CHUNK_LINES || !ELIXIR_CONTAINERS.has(target)) {
+        chunks.push(makeChunk(node, kind))
+      } else {
+        splitElixirContainer(node)
+      }
+      return
+    }
+
     if (!topLevelSet.has(node.type)) return
 
     const lineCount = node.endPosition.row - node.startPosition.row + 1
@@ -300,6 +401,110 @@ export async function chunkFile(
     "body_statement",          // Ruby module/class body
     "block",                   // Python class body
   ])
+
+  // Elixir module attributes that should be attached to the next definition
+  const ELIXIR_ANNOTATIONS = new Set(["doc", "spec", "impl"])
+
+  /** Create a chunk spanning from annotationStart to defNode's end */
+  function makeElixirChunkWithAnnotations(
+    defNode: SyntaxNode,
+    kind: string,
+    annotationStartRow: number,
+  ): CodeChunk {
+    const startLine = annotationStartRow + 1 // 1-based
+    const endLine = defNode.endPosition.row + 1
+    const name = extractName(defNode)
+    const signature = extractSignature(defNode, sourceLines)
+    const snippet = sourceLines.slice(annotationStartRow, defNode.endPosition.row + 1).join("\n")
+    return {
+      chunkKey: `${filePath}:${startLine}:${endLine}`,
+      filePath,
+      language: config.name,
+      kind,
+      name,
+      signature,
+      snippet,
+      startLine,
+      endLine,
+      fileHash,
+    }
+  }
+
+  /** Get the call target of a unary_operator's inner call (e.g., @doc → "doc") */
+  function elixirAttributeTarget(node: SyntaxNode): string | null {
+    if (node.type !== "unary_operator") return null
+    const inner = node.namedChildren.find(c => c.type === "call")
+    if (!inner) return null
+    const target = inner.childForFieldName("target")
+    if (target?.type === "identifier") return target.text
+    return null
+  }
+
+  function splitElixirContainer(node: SyntaxNode): void {
+    const doBlock = node.namedChildren.find(c => c.type === "do_block")
+    if (!doBlock) {
+      chunks.push(makeChunk(node, elixirKind(elixirCallTarget(node) ?? "call")))
+      return
+    }
+
+    const moduleName = extractElixirName(node)
+    const children = doBlock.namedChildren
+    let hasSubItems = false
+    let pendingAnnotationStart: number | null = null
+
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]!
+
+      // @moduledoc → emit as its own chunk
+      const attrTarget = elixirAttributeTarget(child)
+      if (attrTarget === "moduledoc") {
+        const startLine = child.startPosition.row + 1
+        const endLine = child.endPosition.row + 1
+        chunks.push({
+          chunkKey: `${filePath}:${startLine}:${endLine}`,
+          filePath,
+          language: config.name,
+          kind: "doc",
+          name: moduleName,
+          signature: sourceLines[child.startPosition.row]?.trim() ?? "",
+          snippet: child.text,
+          startLine,
+          endLine,
+          fileHash,
+        })
+        hasSubItems = true
+        continue
+      }
+
+      // @doc/@spec/@impl → remember start position for the next definition
+      if (attrTarget && ELIXIR_ANNOTATIONS.has(attrTarget)) {
+        if (pendingAnnotationStart === null) {
+          pendingAnnotationStart = child.startPosition.row
+        }
+        continue
+      }
+
+      // Definition → emit with any preceding annotations
+      const target = elixirCallTarget(child)
+      if (target && ELIXIR_DEFINITIONS.has(target)) {
+        if (pendingAnnotationStart !== null) {
+          chunks.push(makeElixirChunkWithAnnotations(child, elixirKind(target), pendingAnnotationStart))
+        } else {
+          chunks.push(makeChunk(child, elixirKind(target)))
+        }
+        hasSubItems = true
+        pendingAnnotationStart = null
+        continue
+      }
+
+      // Anything else (use, import, etc.) — reset pending annotations
+      pendingAnnotationStart = null
+    }
+
+    if (!hasSubItems) {
+      chunks.push(makeChunk(node, elixirKind(elixirCallTarget(node) ?? "call")))
+    }
+  }
 
   function splitLargeNode(node: SyntaxNode, outerNode: SyntaxNode): void {
     // Large item (e.g., big class/impl block): split into sub-items

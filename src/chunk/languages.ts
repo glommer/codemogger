@@ -211,6 +211,14 @@ const CSHARP: LanguageConfig = {
   splitNodes: ["class_declaration", "interface_declaration", "struct_declaration", "namespace_declaration"],
 }
 
+const ELIXIR: LanguageConfig = {
+  name: "elixir",
+  extensions: [".ex", ".exs"],
+  wasmPath: new URL("./wasm/tree-sitter-elixir.wasm", import.meta.url).pathname,
+  topLevelNodes: ["call"],
+  splitNodes: ["call"],
+}
+
 const RUBY: LanguageConfig = {
   name: "ruby",
   extensions: [".rb"],
@@ -225,7 +233,7 @@ const RUBY: LanguageConfig = {
   splitNodes: ["module", "class"],
 }
 
-const LANGUAGES: LanguageConfig[] = [RUST, JAVASCRIPT, TYPESCRIPT, TSX, C, CPP, CSHARP, PYTHON, GO, ZIG, JAVA, SCALA, PHP, RUBY]
+const LANGUAGES: LanguageConfig[] = [RUST, JAVASCRIPT, TYPESCRIPT, TSX, C, CPP, CSHARP, PYTHON, GO, ZIG, JAVA, SCALA, PHP, RUBY, ELIXIR]
 
 const EXT_MAP = new Map<string, LanguageConfig>()
 for (const lang of LANGUAGES) {
