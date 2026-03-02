@@ -56,6 +56,8 @@ export class Store {
 
   private async init(): Promise<void> {
     if (this.initialized) return
+    await this.db.exec("PRAGMA journal_mode=WAL")
+    await this.db.exec("PRAGMA busy_timeout=5000")
     for (const sql of ALL_SCHEMA) {
       await this.db.exec(sql)
     }
