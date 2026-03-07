@@ -117,6 +117,23 @@ function extractName(node: SyntaxNode): string {
     const str = node.namedChildren.find(c => c.type === "string" || c.type === "string_literal")
     if (str) return str.text.replace(/^"|"$/g, "")
   }
+  // HCL/Terraform blocks: block_type "label1" "label2" { ... }
+  if (node.type === "block") {
+    const blockType = node.namedChildren.find(c => c.type === "identifier")
+    const labels = node.namedChildren
+      .filter(c => c.type === "string_lit")
+      .map(c => c.text.replace(/^"|"$/g, ""))
+
+    if (blockType && labels.length > 0) {
+      return `${blockType.text}.${labels.join(".")}`
+    }
+    if (blockType) return blockType.text
+  }
+  // HCL/Terraform attribute: name = value
+  if (node.type === "attribute") {
+    const ident = node.namedChildren.find(c => c.type === "identifier")
+    if (ident) return ident.text
+  }
   // Try common child field names for identifiers
   for (const childType of ["name", "identifier", "type_identifier"]) {
     const child = node.childForFieldName(childType)
@@ -222,6 +239,9 @@ export async function chunkFile(
     if (type === "object_definition") return "object"
     if (type === "record_declaration") return "record"
     if (type === "constructor_declaration") return "constructor"
+    // HCL/Terraform block kinds
+    if (type === "block") return "block"
+    if (type === "attribute") return "attribute"
     return type
   }
 
@@ -299,6 +319,7 @@ export async function chunkFile(
     "field_declaration_list",  // C++ struct/class body
     "body_statement",          // Ruby module/class body
     "block",                   // Python class body
+    "body",                    // HCL/Terraform block body
   ])
 
   function splitLargeNode(node: SyntaxNode, outerNode: SyntaxNode): void {
@@ -331,7 +352,11 @@ export async function chunkFile(
   }
 
   // Walk top-level children of the root node
-  for (const child of tree.rootNode.children) {
+  const rootChildren = config.rootBodyWrapper
+    ? tree.rootNode.namedChildren.find(c => c.type === config.rootBodyWrapper)?.children ?? tree.rootNode.children
+    : tree.rootNode.children
+
+  for (const child of rootChildren) {
     processNode(child)
   }
 
