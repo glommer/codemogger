@@ -10,6 +10,8 @@ export interface LanguageConfig {
   topLevelNodes: string[]
   /** AST node types that can be split into sub-items when too large */
   splitNodes: string[]
+  /** Root body wrapper node type (e.g., body in config_file) */
+  rootBodyWrapper?: string
 }
 
 const RUST: LanguageConfig = {
@@ -225,7 +227,16 @@ const RUBY: LanguageConfig = {
   splitNodes: ["module", "class"],
 }
 
-const LANGUAGES: LanguageConfig[] = [RUST, JAVASCRIPT, TYPESCRIPT, TSX, C, CPP, CSHARP, PYTHON, GO, ZIG, JAVA, SCALA, PHP, RUBY]
+const HCL: LanguageConfig = {
+  name: "hcl",
+  extensions: [".tf", ".tfvars", ".hcl"],
+  wasmPath: _require.resolve("@tree-sitter-grammars/tree-sitter-hcl/tree-sitter-hcl.wasm"),
+  topLevelNodes: ["block", "attribute"],
+  splitNodes: ["block"],
+  rootBodyWrapper: "body",
+}
+
+const LANGUAGES: LanguageConfig[] = [RUST, JAVASCRIPT, TYPESCRIPT, TSX, C, CPP, CSHARP, PYTHON, GO, ZIG, JAVA, SCALA, PHP, RUBY, HCL]
 
 const EXT_MAP = new Map<string, LanguageConfig>()
 for (const lang of LANGUAGES) {
