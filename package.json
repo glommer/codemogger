@@ -2,6 +2,19 @@
   "name": "codemogger",
   "version": "0.1.2",
   "description": "Code indexing library with tree-sitter chunking and vector+FTS search for AI coding agents",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/glommer/codemogger"
+  },
+  "bin": {
+    "codemogger": "dist/cli.mjs"
+  },
+  "files": [
+    "dist",
+    "codemogger.png",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,29 +24,14 @@
       "import": "./dist/index.js"
     }
   },
-  "bin": {
-    "codemogger": "dist/cli.mjs"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/glommer/codemogger"
-  },
-  "files": [
-    "dist",
-    "codemogger.png",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && bun build bin/codemogger.ts --target node --external @tursodatabase/database --external @modelcontextprotocol/sdk --external @huggingface/transformers --external zod --external commander --external web-tree-sitter --external tree-sitter-rust --external tree-sitter-javascript --external tree-sitter-typescript --external tree-sitter-c --external tree-sitter-cpp --external tree-sitter-python --external tree-sitter-go --external tree-sitter-java --external tree-sitter-scala --external tree-sitter-php --external tree-sitter-ruby --external @tree-sitter-grammars/tree-sitter-zig --outfile dist/cli.mjs && node -e \"let f=require('fs');let c=f.readFileSync('dist/cli.mjs','utf8');f.writeFileSync('dist/cli.mjs',c.replace('#!/usr/bin/env bun','#!/usr/bin/env node'))\"",
     "prepublishOnly": "bun run build",
-    "test": "bun test"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "test": "bun test",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt -c .oxfmtrc.json src",
+    "format:fix": "oxfmt -c .oxfmtrc.json --write src"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
@@ -55,5 +53,13 @@
     "tree-sitter-typescript": "^0.23.2",
     "web-tree-sitter": "^0.26.5",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "oxfmt": "^0.35.0",
+    "oxlint": "^1.50.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

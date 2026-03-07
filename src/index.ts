@@ -1,23 +1,23 @@
-import { join, resolve } from "path";
-import { mkdirSync, statSync, existsSync } from "fs";
+import { join, resolve } from 'path';
+import { mkdirSync, statSync, existsSync } from 'fs';
 import {
   Store,
   type SearchResult,
   type IndexedFile,
   type Codebase,
-} from "./db/store.ts";
-import { scanDirectory } from "./scan/walker.ts";
-import { chunkFile } from "./chunk/treesitter.ts";
-import { detectLanguage } from "./chunk/languages.ts";
-import { preprocessQuery, type QueryMode } from "./search/query.ts";
-import { rrfMerge } from "./search/rank.ts";
-import type { Embedder } from "./embed/types.ts";
+} from './db/store.ts';
+import { scanDirectory } from './scan/walker.ts';
+import { chunkFile } from './chunk/treesitter.ts';
+import { detectLanguage } from './chunk/languages.ts';
+import { preprocessQuery, type QueryMode } from './search/query.ts';
+import { rrfMerge } from './search/rank.ts';
+import type { Embedder } from './embed/types.ts';
 
-export type { SearchResult, IndexedFile, Codebase } from "./db/store.ts";
-export type { CodeChunk } from "./chunk/types.ts";
-export type { Embedder } from "./embed/types.ts";
+export type { SearchResult, IndexedFile, Codebase } from './db/store.ts';
+export type { CodeChunk } from './chunk/types.ts';
+export type { Embedder } from './embed/types.ts';
 
-export type SearchMode = "semantic" | "keyword" | "hybrid";
+export type SearchMode = 'semantic' | 'keyword' | 'hybrid';
 
 export interface SearchOptions {
   limit?: number;
@@ -62,9 +62,9 @@ export interface CodeIndexOptions {
 
 /** Compute the default DB path for a project directory: <dir>/.codemogger/index.db */
 export function projectDbPath(dir: string): string {
-  const dbDir = join(resolve(dir), ".codemogger");
+  const dbDir = join(resolve(dir), '.codemogger');
   mkdirSync(dbDir, { recursive: true });
-  return join(dbDir, "index.db");
+  return join(dbDir, 'index.db');
 }
 
 export class CodeIndex {
@@ -172,14 +172,14 @@ export class CodeIndex {
     ) {
       const batchFiles = filesToProcess.slice(
         batchStart,
-        batchStart + FILE_BATCH,
+        batchStart + FILE_BATCH
       );
 
       // Chunk this batch
       const batchChunks: {
         filePath: string;
         fileHash: string;
-        chunks: import("./chunk/types.ts").CodeChunk[];
+        chunks: import('./chunk/types.ts').CodeChunk[];
       }[] = [];
       for (let bi = 0; bi < batchFiles.length; bi++) {
         const file = batchFiles[bi]!;
@@ -190,7 +190,7 @@ export class CodeIndex {
             file.absPath,
             file.content,
             file.hash,
-            langConfig,
+            langConfig
           );
           batchChunks.push({
             filePath: file.absPath,
@@ -217,7 +217,7 @@ export class CodeIndex {
       const stale = await store.getStaleEmbeddings(
         codebaseId,
         this.embeddingModel,
-        1000,
+        1000
       );
       if (stale.length === 0) break;
 
@@ -230,7 +230,7 @@ export class CodeIndex {
             chunkKey: s.chunkKey,
             embedding: vectors[j]!,
             modelName: this.embeddingModel,
-          })),
+          }))
         );
         embedded += vectors.length;
         progress({ phase: "embed", current: embedded, total: embedTotal });
@@ -259,7 +259,7 @@ export class CodeIndex {
     // Log phase timing if verbose
     if (opts?.verbose) {
       console.log(
-        `  scan: ${scanTime}ms, chunk+embed: ${chunkAndEmbedTime}ms (${embedded} chunks), fts: ${ftsTime}ms`,
+        `  scan: ${scanTime}ms, chunk+embed: ${chunkAndEmbedTime}ms (${embedded} chunks), fts: ${ftsTime}ms`
       );
     }
     return {
@@ -283,12 +283,12 @@ export class CodeIndex {
     const limit = opts?.limit ?? 5;
     const threshold = opts?.threshold ?? 0.0;
     const includeSnippet = opts?.includeSnippet ?? false;
-    const mode = opts?.mode ?? "semantic";
+    const mode = opts?.mode ?? 'semantic';
 
     // Verify the DB is in a readable state before searching
     await this.verifySearchable(store);
 
-    if (mode === "semantic") {
+    if (mode === 'semantic') {
       const [queryVec] = (await this.embedder([query])) as [number[]];
       const results = await store.vectorSearch(queryVec, limit, includeSnippet);
       return threshold > 0
@@ -297,12 +297,12 @@ export class CodeIndex {
     }
 
     // Keyword path: preprocess query for FTS
-    const processed = preprocessQuery(query, "keywords");
+    const processed = preprocessQuery(query, 'keywords');
     if (!processed.trim()) return [];
 
     const ftsResults = await store.ftsSearch(processed, limit, includeSnippet);
 
-    if (mode === "keyword") {
+    if (mode === 'keyword') {
       return threshold > 0
         ? ftsResults.filter((r) => r.score >= threshold)
         : ftsResults;
@@ -313,7 +313,7 @@ export class CodeIndex {
     const vecResults = await store.vectorSearch(
       queryVec,
       limit,
-      includeSnippet,
+      includeSnippet
     );
     const merged = rrfMerge(ftsResults, vecResults, limit);
     return threshold > 0 ? merged.filter((r) => r.score >= threshold) : merged;
@@ -343,7 +343,7 @@ export class CodeIndex {
 
     throw new Error(
       `Database file is ${(fileSize / 1e6).toFixed(0)}MB but contains no indexed chunks. ` +
-        `The database may be locked by another process, or the WAL file may be missing or inaccessible.`,
+        `The database may be locked by another process, or the WAL file may be missing or inaccessible.`
     );
   }
 

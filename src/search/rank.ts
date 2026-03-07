@@ -1,4 +1,4 @@
-import type { SearchResult } from "../db/store.ts"
+import type { SearchResult } from '../db/store.ts';
 
 /**
  * Reciprocal Rank Fusion — combines two ranked result lists into one.
@@ -19,23 +19,29 @@ export function rrfMerge(
   limit: number,
   k = 60,
   ftsWeight = 0.4,
-  vecWeight = 0.6,
+  vecWeight = 0.6
 ): SearchResult[] {
-  const scores = new Map<string, number>()
-  const data = new Map<string, SearchResult>()
+  const scores = new Map<string, number>();
+  const data = new Map<string, SearchResult>();
 
   for (let i = 0; i < ftsResults.length; i++) {
-    const r = ftsResults[i]!
-    scores.set(r.chunkKey, (scores.get(r.chunkKey) ?? 0) + ftsWeight / (k + i + 1))
-    data.set(r.chunkKey, r)
+    const r = ftsResults[i]!;
+    scores.set(
+      r.chunkKey,
+      (scores.get(r.chunkKey) ?? 0) + ftsWeight / (k + i + 1)
+    );
+    data.set(r.chunkKey, r);
   }
 
   for (let i = 0; i < vecResults.length; i++) {
-    const r = vecResults[i]!
-    scores.set(r.chunkKey, (scores.get(r.chunkKey) ?? 0) + vecWeight / (k + i + 1))
+    const r = vecResults[i]!;
+    scores.set(
+      r.chunkKey,
+      (scores.get(r.chunkKey) ?? 0) + vecWeight / (k + i + 1)
+    );
     // Prefer FTS row data (has BM25 score) but fill in from vector if not present
     if (!data.has(r.chunkKey)) {
-      data.set(r.chunkKey, r)
+      data.set(r.chunkKey, r);
     }
   }
 
@@ -43,7 +49,7 @@ export function rrfMerge(
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([key, score]) => {
-      const row = data.get(key)!
-      return { ...row, score }
-    })
+      const row = data.get(key)!;
+      return { ...row, score };
+    });
 }
