@@ -263,6 +263,13 @@ export class Store {
     }
   }
 
+  async countStaleEmbeddings(codebaseId: number, modelName: string): Promise<number> {
+    const row = await this.db.prepare(
+      `SELECT COUNT(*) as cnt FROM chunks WHERE codebase_id = ? AND (embedding IS NULL OR embedding_model != ?)`
+    ).get(codebaseId, modelName) as { cnt: number }
+    return Number(row.cnt)
+  }
+
   /** Get chunks that need (re-)embedding (scoped to codebase) */
   async getStaleEmbeddings(
     codebaseId: number,

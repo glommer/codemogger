@@ -1,9 +1,70 @@
 #!/usr/bin/env bun
-import { program } from "commander";
-import { CodeIndex, projectDbPath, type SearchMode } from "../src/index.ts";
-import { localEmbed, LOCAL_MODEL_NAME } from "../src/embed/local.ts";
-import { formatJson } from "../src/format/json.ts";
-import { formatText } from "../src/format/text.ts";
+import { program } from "commander"
+import { CodeIndex, projectDbPath, type SearchMode, type IndexProgress } from "../src/index.ts"
+import { localEmbed, LOCAL_MODEL_NAME } from "../src/embed/local.ts"
+import { formatJson } from "../src/format/json.ts"
+import { formatText } from "../src/format/text.ts"
+
+const isTTY = process.stderr.isTTY
+
+/** OSC 9;4 terminal progress — works in Ghostty, Windows Terminal, Konsole, WezTerm, kitty, etc. */
+function oscProgress(state: 0 | 1 | 2 | 3, percent?: number) {
+  if (!isTTY) return
+  const p = percent != null ? `;${Math.round(Math.min(100, Math.max(0, percent)))}` : ""
+  process.stderr.write(`\x1b]9;4;${state}${p}\x07`)
+}
+
+const phaseLabel: Record<string, string> = {
+  scan: "Scanning files",
+  hash: "Checking for changes",
+  chunk: "Chunking files",
+  embed: "Embedding chunks",
+  cleanup: "Removing stale files",
+  fts: "Rebuilding search index",
+}
+
+function formatEta(ms: number): string {
+  if (ms < 1000) return "<1s"
+  const s = Math.ceil(ms / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  const rem = s % 60
+  return rem > 0 ? `${m}m ${rem}s` : `${m}m`
+}
+
+let phaseStart = 0
+let lastPhase = ""
+
+function renderProgress(p: IndexProgress) {
+  if (p.phase !== lastPhase) {
+    lastPhase = p.phase
+    phaseStart = performance.now()
+  }
+  const label = phaseLabel[p.phase] ?? p.phase
+  if (p.total > 0) {
+    const pct = Math.round((p.current / p.total) * 100)
+    oscProgress(1, pct)
+    if (isTTY) {
+      let eta = ""
+      if (p.current > 1) {
+        const elapsed = performance.now() - phaseStart
+        const remaining = (elapsed / p.current) * (p.total - p.current)
+        eta = ` ~${formatEta(remaining)}`
+      }
+      process.stderr.write(`\r\x1b[K${label}  ${pct}% (${p.current}/${p.total})${eta}`)
+    }
+  } else {
+    oscProgress(3)
+    if (isTTY) {
+      process.stderr.write(`\r\x1b[K${label}...`)
+    }
+  }
+}
+
+function clearProgress() {
+  oscProgress(0)
+  if (isTTY) process.stderr.write(`\r\x1b[K`)
+}
 
 /** Resolve DB path: --db flag overrides, otherwise per-project default */
 function resolveDbPath(dir?: string): string {
@@ -31,7 +92,10 @@ program
       const result = await db.index(dir, {
         languages: opts.language ? [opts.language] : undefined,
         verbose: opts.verbose,
-      });
+        onProgress: renderProgress,
+      })
+
+      clearProgress()
 
       if (opts.verbose || result.errors.length > 0) {
         for (const err of result.errors) {
@@ -41,12 +105,15 @@ program
 
       console.log(
         `Indexed ${result.files} file${result.files !== 1 ? "s" : ""} → ` +
-          `${result.chunks} chunks, ` +
-          `embedded ${result.embedded}, ` +
-          `skipped ${result.skipped} unchanged, ` +
-          `removed ${result.removed} stale ` +
-          `(${result.duration}ms)`,
-      );
+        `${result.chunks} chunks, ` +
+        `embedded ${result.embedded}, ` +
+        `skipped ${result.skipped} unchanged, ` +
+        `removed ${result.removed} stale ` +
+        `(${result.duration}ms)`
+      )
+    } catch (e) {
+      clearProgress()
+      throw e
     } finally {
       await db.close();
     }

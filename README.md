@@ -53,6 +53,14 @@ The MCP server exposes three tools:
 - `codemogger_index` - index a codebase for the first time
 - `codemogger_reindex` - update the index after modifying files
 
+
+Add the local db to `.gitignore`:
+
+```gitignore
+# codemogger db
+.codemogger/
+```
+
 ## SDK
 
 codemogger is also usable as a library. The SDK has no model dependency - you provide your own embedding function:
