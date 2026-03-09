@@ -1,6 +1,6 @@
 {
   "name": "codemogger",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Code indexing library with tree-sitter chunking and vector+FTS search for AI coding agents",
   "type": "module",
   "main": "dist/index.js",
