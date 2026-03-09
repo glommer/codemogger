@@ -38,8 +38,13 @@ function loadIgnorePatterns(content: string): Set<string> {
     if (!trimmed || trimmed.startsWith("#")) continue;
     // Strip trailing slash for directory matching
     const clean = trimmed.replace(/\/$/, "");
-    if (clean && !clean.includes("*")) {
+    if (!clean) continue;
+    if (!clean.includes("*")) {
       patterns.add(clean);
+    } else {
+      // Handle **/name and **/name/ patterns — extract the directory name
+      const match = clean.match(/^\*\*\/([^*\/]+)$/);
+      if (match) patterns.add(match[1]!);
     }
   }
   return patterns;
