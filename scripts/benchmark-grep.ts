@@ -6,15 +6,15 @@
  * and grep for them. Measures the same metrics as the recall benchmark.
  */
 
-import { execSync } from "child_process"
+import { execSync } from "child_process";
 
 interface BenchmarkQuery {
-  query: string
+  query: string;
   /** Keywords an agent would realistically grep for */
-  grepPatterns: string[]
-  expectedFiles: string[]
-  expectedNames?: string[]
-  category: string
+  grepPatterns: string[];
+  expectedFiles: string[];
+  expectedNames?: string[];
+  category: string;
 }
 
 const QUERIES: BenchmarkQuery[] = [
@@ -73,7 +73,8 @@ const QUERIES: BenchmarkQuery[] = [
     category: "where-clause",
   },
   {
-    query: "How does the query planner determine which WHERE clauses can be evaluated early in the join?",
+    query:
+      "How does the query planner determine which WHERE clauses can be evaluated early in the join?",
     grepPatterns: ["where_to_eval", "push.*down", "early.*eval"],
     expectedFiles: ["planner.rs"],
     category: "planning",
@@ -138,25 +139,25 @@ const QUERIES: BenchmarkQuery[] = [
     expectedFiles: ["index.rs"],
     category: "features",
   },
-]
+];
 
-const BASE_DIR = "/Users/glaubercosta/recall/turso/core/translate"
+const BASE_DIR = "/Users/glaubercosta/recall/turso/core/translate";
 
 function grepForPatterns(patterns: string[]): string[] {
-  const fileHits = new Map<string, number>()
+  const fileHits = new Map<string, number>();
 
   for (const pattern of patterns) {
     try {
       const output = execSync(
         `grep -rl "${pattern}" "${BASE_DIR}" --include="*.rs" 2>/dev/null || true`,
-        { encoding: "utf-8", timeout: 5000 }
-      ).trim()
+        { encoding: "utf-8", timeout: 5000 },
+      ).trim();
 
-      if (!output) continue
+      if (!output) continue;
 
       for (const file of output.split("\n")) {
-        const relPath = file.replace(BASE_DIR + "/", "")
-        fileHits.set(relPath, (fileHits.get(relPath) ?? 0) + 1)
+        const relPath = file.replace(BASE_DIR + "/", "");
+        fileHits.set(relPath, (fileHits.get(relPath) ?? 0) + 1);
       }
     } catch {
       // grep failed or timed out
@@ -167,66 +168,72 @@ function grepForPatterns(patterns: string[]): string[] {
   return [...fileHits.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([file]) => file)
-    .slice(0, 5)
+    .slice(0, 5);
 }
 
 function isCorrectFile(resultFile: string, expectedFiles: string[]): boolean {
-  return expectedFiles.some((ef) => resultFile.endsWith(ef))
+  return expectedFiles.some((ef) => resultFile.endsWith(ef));
 }
 
 function main() {
-  console.log(`Baseline: grep-based code search on turso/core/translate`)
-  console.log(`Queries: ${QUERIES.length}`)
-  console.log(`---`)
+  console.log(`Baseline: grep-based code search on turso/core/translate`);
+  console.log(`Queries: ${QUERIES.length}`);
+  console.log(`---`);
 
-  let top1Hits = 0
-  let top3Hits = 0
-  let top5Hits = 0
-  let mrrSum = 0
-  let totalLatency = 0
+  let top1Hits = 0;
+  let top3Hits = 0;
+  let top5Hits = 0;
+  let mrrSum = 0;
+  let totalLatency = 0;
 
   for (let i = 0; i < QUERIES.length; i++) {
-    const q = QUERIES[i]
-    const start = performance.now()
-    const results = grepForPatterns(q.grepPatterns)
-    const latency = Math.round(performance.now() - start)
-    totalLatency += latency
+    const q = QUERIES[i];
+    const start = performance.now();
+    const results = grepForPatterns(q.grepPatterns);
+    const latency = Math.round(performance.now() - start);
+    totalLatency += latency;
 
-    const top1Correct = results.length > 0 && isCorrectFile(results[0], q.expectedFiles)
-    const top3Correct = results.slice(0, 3).some((r) => isCorrectFile(r, q.expectedFiles))
-    const top5Correct = results.some((r) => isCorrectFile(r, q.expectedFiles))
+    const top1Correct = results.length > 0 && isCorrectFile(results[0], q.expectedFiles);
+    const top3Correct = results.slice(0, 3).some((r) => isCorrectFile(r, q.expectedFiles));
+    const top5Correct = results.some((r) => isCorrectFile(r, q.expectedFiles));
 
-    let firstCorrectRank = 0
+    let firstCorrectRank = 0;
     for (let j = 0; j < results.length; j++) {
       if (isCorrectFile(results[j], q.expectedFiles)) {
-        firstCorrectRank = j + 1
-        break
+        firstCorrectRank = j + 1;
+        break;
       }
     }
 
-    if (top1Correct) top1Hits++
-    if (top3Correct) top3Hits++
-    if (top5Correct) top5Hits++
-    if (firstCorrectRank > 0) mrrSum += 1 / firstCorrectRank
+    if (top1Correct) top1Hits++;
+    if (top3Correct) top3Hits++;
+    if (top5Correct) top5Hits++;
+    if (firstCorrectRank > 0) mrrSum += 1 / firstCorrectRank;
 
-    const mark = top1Correct ? "HIT" : top3Correct ? "top3" : top5Correct ? "top5" : "MISS"
+    const mark = top1Correct ? "HIT" : top3Correct ? "top3" : top5Correct ? "top5" : "MISS";
     console.log(
-      `[${String(i + 1).padStart(2)}] ${mark.padEnd(4)} (${latency}ms) ${q.query.slice(0, 70)}...`
-    )
-    console.log(`       → ${results.slice(0, 3).join(", ") || "(no results)"}`)
+      `[${String(i + 1).padStart(2)}] ${mark.padEnd(4)} (${latency}ms) ${q.query.slice(0, 70)}...`,
+    );
+    console.log(`       → ${results.slice(0, 3).join(", ") || "(no results)"}`);
     if (mark === "MISS") {
-      console.log(`       expected: ${q.expectedFiles.join(", ")}`)
+      console.log(`       expected: ${q.expectedFiles.join(", ")}`);
     }
   }
 
-  console.log(`\n${"=".repeat(70)}`)
-  console.log(`RESULTS — GREP BASELINE (${QUERIES.length} queries)`)
-  console.log(`${"=".repeat(70)}`)
-  console.log(`Top-1 accuracy:  ${top1Hits}/${QUERIES.length} = ${((top1Hits / QUERIES.length) * 100).toFixed(0)}%`)
-  console.log(`Top-3 recall:    ${top3Hits}/${QUERIES.length} = ${((top3Hits / QUERIES.length) * 100).toFixed(0)}%`)
-  console.log(`Top-5 recall:    ${top5Hits}/${QUERIES.length} = ${((top5Hits / QUERIES.length) * 100).toFixed(0)}%`)
-  console.log(`MRR:             ${(mrrSum / QUERIES.length).toFixed(3)}`)
-  console.log(`Avg latency:     ${Math.round(totalLatency / QUERIES.length)}ms`)
+  console.log(`\n${"=".repeat(70)}`);
+  console.log(`RESULTS — GREP BASELINE (${QUERIES.length} queries)`);
+  console.log(`${"=".repeat(70)}`);
+  console.log(
+    `Top-1 accuracy:  ${top1Hits}/${QUERIES.length} = ${((top1Hits / QUERIES.length) * 100).toFixed(0)}%`,
+  );
+  console.log(
+    `Top-3 recall:    ${top3Hits}/${QUERIES.length} = ${((top3Hits / QUERIES.length) * 100).toFixed(0)}%`,
+  );
+  console.log(
+    `Top-5 recall:    ${top5Hits}/${QUERIES.length} = ${((top5Hits / QUERIES.length) * 100).toFixed(0)}%`,
+  );
+  console.log(`MRR:             ${(mrrSum / QUERIES.length).toFixed(3)}`);
+  console.log(`Avg latency:     ${Math.round(totalLatency / QUERIES.length)}ms`);
 }
 
-main()
+main();

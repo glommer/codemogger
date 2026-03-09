@@ -8,66 +8,243 @@
 
 /** Common English stopwords. Embedded at import time, no I/O. */
 const STOPWORDS = new Set([
-  "a", "about", "above", "after", "again", "against", "all", "am", "an",
-  "and", "any", "are", "aren't", "as", "at", "be", "because", "been",
-  "before", "being", "below", "between", "both", "but", "by", "can",
-  "can't", "cannot", "could", "couldn't", "did", "didn't", "do", "does",
-  "doesn't", "doing", "don't", "down", "during", "each", "few", "for",
-  "from", "further", "get", "got", "had", "hadn't", "has", "hasn't",
-  "have", "haven't", "having", "he", "he'd", "he'll", "he's", "her",
-  "here", "here's", "hers", "herself", "him", "himself", "his", "how",
-  "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is",
-  "isn't", "it", "it's", "its", "itself", "just", "let", "let's", "like",
-  "me", "might", "more", "most", "mustn't", "my", "myself", "need", "no",
-  "nor", "not", "now", "of", "off", "on", "once", "only", "or", "other",
-  "ought", "our", "ours", "ourselves", "out", "over", "own", "please",
-  "same", "shan't", "she", "she'd", "she'll", "she's", "should",
-  "shouldn't", "so", "some", "such", "than", "that", "that's", "the",
-  "their", "theirs", "them", "themselves", "then", "there", "there's",
-  "these", "they", "they'd", "they'll", "they're", "they've", "this",
-  "those", "through", "to", "too", "under", "until", "up", "us", "very",
-  "want", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've",
-  "were", "weren't", "what", "what's", "when", "when's", "where",
-  "where's", "which", "while", "who", "who's", "whom", "why", "why's",
-  "will", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll",
-  "you're", "you've", "your", "yours", "yourself", "yourselves",
+  'a',
+  'about',
+  'above',
+  'after',
+  'again',
+  'against',
+  'all',
+  'am',
+  'an',
+  'and',
+  'any',
+  'are',
+  "aren't",
+  'as',
+  'at',
+  'be',
+  'because',
+  'been',
+  'before',
+  'being',
+  'below',
+  'between',
+  'both',
+  'but',
+  'by',
+  'can',
+  "can't",
+  'cannot',
+  'could',
+  "couldn't",
+  'did',
+  "didn't",
+  'do',
+  'does',
+  "doesn't",
+  'doing',
+  "don't",
+  'down',
+  'during',
+  'each',
+  'few',
+  'for',
+  'from',
+  'further',
+  'get',
+  'got',
+  'had',
+  "hadn't",
+  'has',
+  "hasn't",
+  'have',
+  "haven't",
+  'having',
+  'he',
+  "he'd",
+  "he'll",
+  "he's",
+  'her',
+  'here',
+  "here's",
+  'hers',
+  'herself',
+  'him',
+  'himself',
+  'his',
+  'how',
+  "how's",
+  'i',
+  "i'd",
+  "i'll",
+  "i'm",
+  "i've",
+  'if',
+  'in',
+  'into',
+  'is',
+  "isn't",
+  'it',
+  "it's",
+  'its',
+  'itself',
+  'just',
+  'let',
+  "let's",
+  'like',
+  'me',
+  'might',
+  'more',
+  'most',
+  "mustn't",
+  'my',
+  'myself',
+  'need',
+  'no',
+  'nor',
+  'not',
+  'now',
+  'of',
+  'off',
+  'on',
+  'once',
+  'only',
+  'or',
+  'other',
+  'ought',
+  'our',
+  'ours',
+  'ourselves',
+  'out',
+  'over',
+  'own',
+  'please',
+  'same',
+  "shan't",
+  'she',
+  "she'd",
+  "she'll",
+  "she's",
+  'should',
+  "shouldn't",
+  'so',
+  'some',
+  'such',
+  'than',
+  'that',
+  "that's",
+  'the',
+  'their',
+  'theirs',
+  'them',
+  'themselves',
+  'then',
+  'there',
+  "there's",
+  'these',
+  'they',
+  "they'd",
+  "they'll",
+  "they're",
+  "they've",
+  'this',
+  'those',
+  'through',
+  'to',
+  'too',
+  'under',
+  'until',
+  'up',
+  'us',
+  'very',
+  'want',
+  'was',
+  "wasn't",
+  'we',
+  "we'd",
+  "we'll",
+  "we're",
+  "we've",
+  'were',
+  "weren't",
+  'what',
+  "what's",
+  'when',
+  "when's",
+  'where',
+  "where's",
+  'which',
+  'while',
+  'who',
+  "who's",
+  'whom',
+  'why',
+  "why's",
+  'will',
+  'with',
+  "won't",
+  'would',
+  "wouldn't",
+  'you',
+  "you'd",
+  "you'll",
+  "you're",
+  "you've",
+  'your',
+  'yours',
+  'yourself',
+  'yourselves',
   // Agent-specific filler
-  "help", "please", "can", "could", "would", "should", "file", "files",
-  "code", "use", "using", "make", "way", "thing", "something",
-])
+  'help',
+  'please',
+  'can',
+  'could',
+  'would',
+  'should',
+  'file',
+  'files',
+  'code',
+  'use',
+  'using',
+  'make',
+  'way',
+  'thing',
+  'something',
+]);
 
-const TOKEN_RE = /[a-z0-9]+(?:[-_.][a-z0-9]+)*/g
-const MIN_LEN = 3
-const MAX_LEN = 30
-const MAX_TERMS = 12
+const TOKEN_RE = /[a-z0-9]+(?:[-_.][a-z0-9]+)*/g;
+const MIN_LEN = 3;
+const MAX_LEN = 30;
+const MAX_TERMS = 12;
 
 /**
  * Extract keywords from a natural language prompt.
  * Returns a space-separated string of discriminative terms suitable for FTS.
  */
 export function extractKeywords(prompt: string): string {
-  const lower = prompt.toLowerCase()
-  const tokens = lower.match(TOKEN_RE) ?? []
+  const lower = prompt.toLowerCase();
+  const tokens = lower.match(TOKEN_RE) ?? [];
 
-  const seen = new Set<string>()
-  const result: string[] = []
+  const seen = new Set<string>();
+  const result: string[] = [];
 
   for (const token of tokens) {
-    if (token.length < MIN_LEN || token.length > MAX_LEN) continue
-    if (STOPWORDS.has(token)) continue
-    if (seen.has(token)) continue
-    seen.add(token)
-    result.push(token)
-    if (result.length >= MAX_TERMS) break
+    if (token.length < MIN_LEN || token.length > MAX_LEN) continue;
+    if (STOPWORDS.has(token)) continue;
+    if (seen.has(token)) continue;
+    seen.add(token);
+    result.push(token);
+    if (result.length >= MAX_TERMS) break;
   }
 
-  return result.join(" ")
+  return result.join(' ');
 }
 
-export type QueryMode = "raw" | "keywords"
+export type QueryMode = 'raw' | 'keywords';
 
 /** Preprocess a query based on mode */
 export function preprocessQuery(query: string, mode: QueryMode): string {
-  if (mode === "raw") return query
-  return extractKeywords(query)
+  if (mode === 'raw') return query;
+  return extractKeywords(query);
 }

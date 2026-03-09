@@ -1,7 +1,7 @@
-import { readdir, readFile, stat } from "fs/promises";
-import { join, relative } from "path";
-import { createHash } from "crypto";
-import { detectLanguage } from "../chunk/languages.ts";
+import { readdir, readFile, stat } from 'fs/promises';
+import { join, relative } from 'path';
+import { createHash } from 'crypto';
+import { detectLanguage } from '../chunk/languages.ts';
 
 export interface ScannedFile {
   /** Absolute path */
@@ -15,30 +15,30 @@ export interface ScannedFile {
 
 /** Directory names to always ignore */
 const ALWAYS_IGNORE = new Set([
-  ".git",
-  "node_modules",
-  "target",
-  "build",
-  "dist",
-  ".next",
-  "__pycache__",
-  ".tox",
-  ".venv",
-  "venv",
-  ".mypy_cache",
-  ".cargo",
-  ".rustup",
+  '.git',
+  'node_modules',
+  'target',
+  'build',
+  'dist',
+  '.next',
+  '__pycache__',
+  '.tox',
+  '.venv',
+  'venv',
+  '.mypy_cache',
+  '.cargo',
+  '.rustup',
 ]);
 
 /** Parse .gitignore-style patterns (simplified: directory names only) */
 function loadIgnorePatterns(content: string): Set<string> {
   const patterns = new Set<string>();
-  for (const line of content.split("\n")) {
+  for (const line of content.split('\n')) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (!trimmed || trimmed.startsWith('#')) continue;
     // Strip trailing slash for directory matching
-    const clean = trimmed.replace(/\/$/, "");
-    if (clean && !clean.includes("*")) {
+    const clean = trimmed.replace(/\/$/, '');
+    if (clean && !clean.includes('*')) {
       patterns.add(clean);
     }
   }
@@ -48,7 +48,7 @@ function loadIgnorePatterns(content: string): Set<string> {
 /** Walk a directory tree and return source files with their content and hashes */
 export async function scanDirectory(
   rootDir: string,
-  languages?: string[],
+  languages?: string[]
 ): Promise<{ files: ScannedFile[]; errors: string[] }> {
   const files: ScannedFile[] = [];
   const errors: string[] = [];
@@ -56,7 +56,7 @@ export async function scanDirectory(
   // Load .gitignore from root
   let ignorePatterns = new Set<string>();
   try {
-    const gitignore = await readFile(join(rootDir, ".gitignore"), "utf-8");
+    const gitignore = await readFile(join(rootDir, '.gitignore'), 'utf-8');
     ignorePatterns = loadIgnorePatterns(gitignore);
   } catch {
     // no .gitignore
@@ -77,7 +77,7 @@ export async function scanDirectory(
       const name = entry.name;
 
       // Skip hidden files and always-ignored directories
-      if (name.startsWith(".") && name !== ".") continue;
+      if (name.startsWith('.') && name !== '.') continue;
       if (ALWAYS_IGNORE.has(name)) continue;
       if (ignorePatterns.has(name)) continue;
 
@@ -100,8 +100,8 @@ export async function scanDirectory(
         // Skip empty files and very large files (>1MB)
         if (stats.size === 0 || stats.size > 1_000_000) continue;
 
-        const content = await readFile(fullPath, "utf-8");
-        const hash = createHash("sha256").update(content).digest("hex");
+        const content = await readFile(fullPath, 'utf-8');
+        const hash = createHash('sha256').update(content).digest('hex');
         const relPath = relative(rootDir, fullPath);
 
         files.push({

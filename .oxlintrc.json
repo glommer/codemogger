@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import", "promise", "oxc"],
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "globals": {
+    "Bun": "readonly"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "coverage/**",
+    "*.d.ts",
+    "bun.lock",
+    "bunfig.toml",
+    "bin/**"
+  ],
+  "rules": {
+    "eqeqeq": "error",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": "error",
+    "no-console": "warn",
+    "prefer-const": "error",
+    "no-var": "error",
+    "no-debugger": "error"
+  }
+}

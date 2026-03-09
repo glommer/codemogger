@@ -10,15 +10,15 @@
  *  - Search latency
  */
 
-import { CodeIndex } from "../src/index.ts"
+import { CodeIndex } from "../src/index.ts";
 
 interface BenchmarkQuery {
-  query: string
+  query: string;
   /** Files that count as correct (relative paths from turso/core/translate/) */
-  expectedFiles: string[]
+  expectedFiles: string[];
   /** Optional: specific function/struct names that count as correct */
-  expectedNames?: string[]
-  category: string
+  expectedNames?: string[];
+  category: string;
 }
 
 const QUERIES: BenchmarkQuery[] = [
@@ -26,7 +26,11 @@ const QUERIES: BenchmarkQuery[] = [
   {
     query: "How does the query optimizer decide whether to use a table scan or an index scan?",
     expectedFiles: ["optimizer/access_method.rs", "optimizer/mod.rs"],
-    expectedNames: ["find_best_access_method_for_join_order", "AccessMethod", "optimize_table_access"],
+    expectedNames: [
+      "find_best_access_method_for_join_order",
+      "AccessMethod",
+      "optimize_table_access",
+    ],
     category: "access-method",
   },
   {
@@ -52,7 +56,11 @@ const QUERIES: BenchmarkQuery[] = [
   {
     query: "What algorithm is used for computing join order - dynamic programming or greedy?",
     expectedFiles: ["optimizer/join.rs"],
-    expectedNames: ["compute_best_join_order", "compute_greedy_join_order", "compute_naive_left_deep_plan"],
+    expectedNames: [
+      "compute_best_join_order",
+      "compute_greedy_join_order",
+      "compute_naive_left_deep_plan",
+    ],
     category: "join-order",
   },
   {
@@ -66,7 +74,11 @@ const QUERIES: BenchmarkQuery[] = [
   {
     query: "How does the optimizer extract usable predicates from a WHERE clause for index seeks?",
     expectedFiles: ["optimizer/constraints.rs", "planner.rs"],
-    expectedNames: ["constraints_from_where_clause", "usable_constraints_for_join_order", "parse_where"],
+    expectedNames: [
+      "constraints_from_where_clause",
+      "usable_constraints_for_join_order",
+      "parse_where",
+    ],
     category: "where-clause",
   },
   {
@@ -84,7 +96,8 @@ const QUERIES: BenchmarkQuery[] = [
 
   // Category 4: Query Planning & Execution
   {
-    query: "How does the query planner determine which WHERE clauses can be evaluated early in the join?",
+    query:
+      "How does the query planner determine which WHERE clauses can be evaluated early in the join?",
     expectedFiles: ["planner.rs"],
     expectedNames: ["determine_where_to_eval_term", "parse_where"],
     category: "planning",
@@ -92,7 +105,12 @@ const QUERIES: BenchmarkQuery[] = [
   {
     query: "How are aggregate functions compiled in the presence of GROUP BY?",
     expectedFiles: ["aggregation.rs", "group_by.rs"],
-    expectedNames: ["emit_ungrouped_aggregation", "group_by_process_single_group", "translate_aggregation_step", "group_by_agg_phase"],
+    expectedNames: [
+      "emit_ungrouped_aggregation",
+      "group_by_process_single_group",
+      "translate_aggregation_step",
+      "group_by_agg_phase",
+    ],
     category: "planning",
   },
   {
@@ -112,7 +130,11 @@ const QUERIES: BenchmarkQuery[] = [
   {
     query: "How are subqueries materialized during query execution?",
     expectedFiles: ["subquery.rs"],
-    expectedNames: ["emit_from_clause_subqueries", "emit_non_from_clause_subquery", "plan_subqueries_from_select_plan"],
+    expectedNames: [
+      "emit_from_clause_subqueries",
+      "emit_non_from_clause_subquery",
+      "plan_subqueries_from_select_plan",
+    ],
     category: "codegen",
   },
   {
@@ -153,54 +175,56 @@ const QUERIES: BenchmarkQuery[] = [
     expectedNames: ["translate_create_index", "resolve_sorted_columns"],
     category: "features",
   },
-]
+];
 
 function isCorrectFile(resultFile: string, expectedFiles: string[]): boolean {
-  return expectedFiles.some((ef) => resultFile.endsWith(ef))
+  return expectedFiles.some((ef) => resultFile.endsWith(ef));
 }
 
 function isCorrectName(resultName: string, expectedNames?: string[]): boolean {
-  if (!expectedNames) return false
-  return expectedNames.some((en) => resultName === en || resultName.includes(en))
+  if (!expectedNames) return false;
+  return expectedNames.some((en) => resultName === en || resultName.includes(en));
 }
 
 async function main() {
-  const dbPath = process.argv[2] || "/tmp/recall-test.db"
-  console.log(`Benchmark: recall code search on turso/core/translate`)
-  console.log(`Database: ${dbPath}`)
-  console.log(`Queries: ${QUERIES.length}`)
-  console.log(`---`)
+  const dbPath = process.argv[2] || "/tmp/recall-test.db";
+  console.log(`Benchmark: recall code search on turso/core/translate`);
+  console.log(`Database: ${dbPath}`);
+  console.log(`Queries: ${QUERIES.length}`);
+  console.log(`---`);
 
-  const db = new CodeIndex({ dbPath })
+  const db = new CodeIndex({ dbPath });
 
-  let top1Hits = 0
-  let top3Hits = 0
-  let top5Hits = 0
-  let mrrSum = 0
-  let totalLatency = 0
-  const categoryStats = new Map<string, { top1: number; top3: number; total: number }>()
+  let top1Hits = 0;
+  let top3Hits = 0;
+  let top5Hits = 0;
+  let mrrSum = 0;
+  let totalLatency = 0;
+  const categoryStats = new Map<string, { top1: number; top3: number; total: number }>();
 
   for (let i = 0; i < QUERIES.length; i++) {
-    const q = QUERIES[i]
-    const start = performance.now()
-    const results = await db.search(q.query, { limit: 5, includeSnippet: false })
-    const latency = Math.round(performance.now() - start)
-    totalLatency += latency
+    const q = QUERIES[i];
+    const start = performance.now();
+    const results = await db.search(q.query, { limit: 5, includeSnippet: false });
+    const latency = Math.round(performance.now() - start);
+    totalLatency += latency;
 
     // Check results against expected
-    let firstCorrectRank = 0
+    let firstCorrectRank = 0;
     const top1Correct =
       results.length > 0 &&
       (isCorrectFile(results[0].filePath, q.expectedFiles) ||
-        isCorrectName(results[0].name, q.expectedNames))
+        isCorrectName(results[0].name, q.expectedNames));
 
-    const top3Correct = results.slice(0, 3).some(
-      (r) => isCorrectFile(r.filePath, q.expectedFiles) || isCorrectName(r.name, q.expectedNames)
-    )
+    const top3Correct = results
+      .slice(0, 3)
+      .some(
+        (r) => isCorrectFile(r.filePath, q.expectedFiles) || isCorrectName(r.name, q.expectedNames),
+      );
 
     const top5Correct = results.some(
-      (r) => isCorrectFile(r.filePath, q.expectedFiles) || isCorrectName(r.name, q.expectedNames)
-    )
+      (r) => isCorrectFile(r.filePath, q.expectedFiles) || isCorrectName(r.name, q.expectedNames),
+    );
 
     // Find rank of first correct result for MRR
     for (let j = 0; j < results.length; j++) {
@@ -208,56 +232,62 @@ async function main() {
         isCorrectFile(results[j].filePath, q.expectedFiles) ||
         isCorrectName(results[j].name, q.expectedNames)
       ) {
-        firstCorrectRank = j + 1
-        break
+        firstCorrectRank = j + 1;
+        break;
       }
     }
 
-    if (top1Correct) top1Hits++
-    if (top3Correct) top3Hits++
-    if (top5Correct) top5Hits++
-    if (firstCorrectRank > 0) mrrSum += 1 / firstCorrectRank
+    if (top1Correct) top1Hits++;
+    if (top3Correct) top3Hits++;
+    if (top5Correct) top5Hits++;
+    if (firstCorrectRank > 0) mrrSum += 1 / firstCorrectRank;
 
     // Category tracking
-    const cat = categoryStats.get(q.category) || { top1: 0, top3: 0, total: 0 }
-    cat.total++
-    if (top1Correct) cat.top1++
-    if (top3Correct) cat.top3++
-    categoryStats.set(q.category, cat)
+    const cat = categoryStats.get(q.category) || { top1: 0, top3: 0, total: 0 };
+    cat.total++;
+    if (top1Correct) cat.top1++;
+    if (top3Correct) cat.top3++;
+    categoryStats.set(q.category, cat);
 
     // Print per-query result
-    const mark = top1Correct ? "HIT" : top3Correct ? "top3" : top5Correct ? "top5" : "MISS"
+    const mark = top1Correct ? "HIT" : top3Correct ? "top3" : top5Correct ? "top5" : "MISS";
     const resultSummary = results
       .slice(0, 3)
       .map((r) => `${r.name || r.kind}@${r.filePath}`)
-      .join(", ")
+      .join(", ");
     console.log(
-      `[${String(i + 1).padStart(2)}] ${mark.padEnd(4)} (${latency}ms) ${q.query.slice(0, 70)}...`
-    )
-    console.log(`       → ${resultSummary}`)
+      `[${String(i + 1).padStart(2)}] ${mark.padEnd(4)} (${latency}ms) ${q.query.slice(0, 70)}...`,
+    );
+    console.log(`       → ${resultSummary}`);
     if (mark === "MISS") {
-      console.log(`       expected: ${q.expectedFiles.join(", ")}`)
+      console.log(`       expected: ${q.expectedFiles.join(", ")}`);
     }
   }
 
-  console.log(`\n${"=".repeat(70)}`)
-  console.log(`RESULTS (${QUERIES.length} queries)`)
-  console.log(`${"=".repeat(70)}`)
-  console.log(`Top-1 accuracy:  ${top1Hits}/${QUERIES.length} = ${((top1Hits / QUERIES.length) * 100).toFixed(0)}%`)
-  console.log(`Top-3 recall:    ${top3Hits}/${QUERIES.length} = ${((top3Hits / QUERIES.length) * 100).toFixed(0)}%`)
-  console.log(`Top-5 recall:    ${top5Hits}/${QUERIES.length} = ${((top5Hits / QUERIES.length) * 100).toFixed(0)}%`)
-  console.log(`MRR:             ${(mrrSum / QUERIES.length).toFixed(3)}`)
-  console.log(`Avg latency:     ${Math.round(totalLatency / QUERIES.length)}ms`)
-  console.log(`Total latency:   ${totalLatency}ms`)
+  console.log(`\n${"=".repeat(70)}`);
+  console.log(`RESULTS (${QUERIES.length} queries)`);
+  console.log(`${"=".repeat(70)}`);
+  console.log(
+    `Top-1 accuracy:  ${top1Hits}/${QUERIES.length} = ${((top1Hits / QUERIES.length) * 100).toFixed(0)}%`,
+  );
+  console.log(
+    `Top-3 recall:    ${top3Hits}/${QUERIES.length} = ${((top3Hits / QUERIES.length) * 100).toFixed(0)}%`,
+  );
+  console.log(
+    `Top-5 recall:    ${top5Hits}/${QUERIES.length} = ${((top5Hits / QUERIES.length) * 100).toFixed(0)}%`,
+  );
+  console.log(`MRR:             ${(mrrSum / QUERIES.length).toFixed(3)}`);
+  console.log(`Avg latency:     ${Math.round(totalLatency / QUERIES.length)}ms`);
+  console.log(`Total latency:   ${totalLatency}ms`);
 
-  console.log(`\nBy category:`)
+  console.log(`\nBy category:`);
   for (const [cat, stats] of categoryStats) {
     console.log(
-      `  ${cat.padEnd(16)} top1=${stats.top1}/${stats.total} top3=${stats.top3}/${stats.total}`
-    )
+      `  ${cat.padEnd(16)} top1=${stats.top1}/${stats.total} top3=${stats.top3}/${stats.total}`,
+    );
   }
 
-  await db.close()
+  await db.close();
 }
 
-main().catch(console.error)
+main().catch(console.error);
