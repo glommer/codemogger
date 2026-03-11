@@ -34,7 +34,6 @@
           treefmt = {
             programs.nixfmt.enable = true;
             programs.nixfmt.package = pkgs.nixfmt;
-            programs.prettier.enable = true;
           };
           pre-commit.settings.hooks = {
             treefmt.enable = true;
