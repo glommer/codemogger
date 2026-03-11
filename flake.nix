@@ -1,5 +1,5 @@
 {
-  description = "TypeScript development environment";
+  description = "Code indexing library with tree-sitter chunking and vector+FTS search for AI coding agents";
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -48,11 +48,13 @@
               ]
               ++ config.pre-commit.settings.enabledPackages;
           };
+          packages.codemogger = pkgs.callPackage ./package.nix { };
           _module.args.pkgs = import inputs.nixpkgs {
             inherit system;
             overlays = lib.attrValues self.overlays;
           };
         };
+
       flake.overlays.default = final: prev: {
         nodejs = final.nodejs_24;
       };
