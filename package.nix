@@ -25,7 +25,7 @@ stdenv.mkDerivation (finalAttrs: {
   buildPhase = ''
     runHook preBuild
 
-    export BUN_TMPDIR=$TMPDIR
+    export BUN_INSTALL_CACHE_DIR="$(mktemp -d)"
     # Install dependencies
     bun install --frozen-lockfile
 
