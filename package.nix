@@ -29,34 +29,7 @@ stdenv.mkDerivation (finalAttrs: {
     bun install --frozen-lockfile
 
     # Build the CLI
-    # 1. Compile TypeScript to dist/
-    bun run tsc -p tsconfig.build.json
-
-    # 2. Bundle CLI with external dependencies
-    bun build bin/codemogger.ts \
-      --target node \
-      --external @tursodatabase/database \
-      --external @modelcontextprotocol/sdk \
-      --external @huggingface/transformers \
-      --external zod \
-      --external commander \
-      --external web-tree-sitter \
-      --external tree-sitter-rust \
-      --external tree-sitter-javascript \
-      --external tree-sitter-typescript \
-      --external tree-sitter-c \
-      --external tree-sitter-cpp \
-      --external tree-sitter-python \
-      --external tree-sitter-go \
-      --external tree-sitter-java \
-      --external tree-sitter-scala \
-      --external tree-sitter-php \
-      --external tree-sitter-ruby \
-      --external @tree-sitter-grammars/tree-sitter-zig \
-      --outfile dist/cli.mjs
-
-    # 3. Fix shebang from bun to node
-    sed -i '1s|#!/usr/bin/env bun|#!/usr/bin/env node|' dist/cli.mjs
+    bun run build
 
     runHook postBuild
   '';
