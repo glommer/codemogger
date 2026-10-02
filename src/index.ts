@@ -222,6 +222,7 @@ export class CodeIndex {
         1000,
       );
       if (stale.length === 0) break;
+      const embeddedBeforePass = embedded;
 
       for (let i = 0; i < stale.length; i += EMBED_BATCH) {
         const slice = stale.slice(i, i + EMBED_BATCH);
@@ -245,6 +246,12 @@ export class CodeIndex {
       }
 
       if (stale.length < 1000) break;
+      // Failed batches remain stale in Store. Stop rather than fetching the
+      // same full page forever when no embeddings were successfully persisted.
+      if (embedded === embeddedBeforePass) {
+        errors.push("embedding stopped: no progress; stale chunks remain for a later indexing attempt");
+        break;
+      }
     }
 
     const chunkAndEmbedTime = Math.round(performance.now() - t1);
