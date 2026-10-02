@@ -1,6 +1,7 @@
 import { connect } from "@tursodatabase/database"
 import {
   ALL_SCHEMA,
+  CREATE_CHUNKS_FILE_INDEX,
   ftsTableName,
   createFtsTableSQL,
   createFtsIndexSQL,
@@ -72,6 +73,8 @@ export class Store {
 
   /** Get or create a codebase entry, returns its id */
   async getOrCreateCodebase(rootPath: string, name?: string): Promise<number> {
+    // Index provision belongs to the indexing/write route, not ordinary reads.
+    await this.db.exec(CREATE_CHUNKS_FILE_INDEX)
     const row = await (await this.db.prepare("SELECT id FROM codebases WHERE root_path = ?")).get(rootPath) as { id: number } | undefined
 
     if (row) return row.id
@@ -108,9 +111,18 @@ export class Store {
 
   // ── File hash management ─────────────────────────────────────────
 
-  /** Get stored file hash, or null if not indexed */
+  /** Get stored hash only when its persisted chunk count is consistent. */
   async getFileHash(codebaseId: number, filePath: string): Promise<string | null> {
-    const row = await (await this.db.prepare("SELECT file_hash FROM indexed_files WHERE codebase_id = ? AND file_path = ?")).get(codebaseId, filePath) as { file_hash: string } | undefined
+    // Older line-only identities could overwrite distinct chunks. Returning null
+    // reparses affected files even when the source itself has not changed.
+    const row = await (await this.db.prepare(`
+      SELECT f.file_hash FROM indexed_files f
+      WHERE f.codebase_id = ? AND f.file_path = ?
+        AND f.chunk_count = (
+          SELECT COUNT(*) FROM chunks c
+          WHERE c.codebase_id = f.codebase_id AND c.file_path = f.file_path
+        )
+    `)).get(codebaseId, filePath) as { file_hash: string } | undefined
     return row?.file_hash ?? null
   }
 

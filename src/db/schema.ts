@@ -91,4 +91,9 @@ SELECT id, name, signature FROM chunks WHERE codebase_id = ? AND file_path = ?
 }
 
 // Core tables (FTS is per-codebase, created dynamically)
+// Cached-hash integrity checks count chunks per file during incremental scans.
+export const CREATE_CHUNKS_FILE_INDEX = `
+CREATE INDEX IF NOT EXISTS idx_chunks_codebase_file ON chunks(codebase_id, file_path)
+`
+
 export const ALL_SCHEMA = [CREATE_CODEBASES_TABLE, CREATE_CHUNKS_TABLE, CREATE_FILES_TABLE]

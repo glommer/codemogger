@@ -1,5 +1,5 @@
 export interface CodeChunk {
-  chunkKey: string    // file_path:startLine:endLine
+  chunkKey: string    // file_path:startLine:endLine[:startColumn:endColumn] for collisions
   filePath: string
   language: string
   kind: string        // "function", "struct", "impl", "class", "module", "block"

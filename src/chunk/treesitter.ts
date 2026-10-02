@@ -175,6 +175,7 @@ export async function chunkFile(
   if (!tree) return []
   const sourceLines = content.split("\n")
   const chunks: CodeChunk[] = []
+  const columns = new Map<CodeChunk, [number, number]>()
 
   const topLevelSet = new Set(config.topLevelNodes)
   const splitSet = new Set(config.splitNodes)
@@ -186,7 +187,7 @@ export async function chunkFile(
     const signature = extractSignature(node, sourceLines)
     const snippet = node.text
 
-    return {
+    const chunk: CodeChunk = {
       chunkKey: `${filePath}:${startLine}:${endLine}`,
       filePath,
       language: config.name,
@@ -198,6 +199,8 @@ export async function chunkFile(
       endLine,
       fileHash,
     }
+    columns.set(chunk, [node.startPosition.column, node.endPosition.column])
+    return chunk
   }
 
   function nodeKind(type: string): string {
@@ -336,6 +339,19 @@ export async function chunkFile(
   // Walk top-level children of the root node
   for (const child of tree.rootNode.children) {
     processNode(child)
+  }
+
+  // Preserve existing identities except when distinct source spans share lines.
+  // Column coordinates distinguish minified definitions without dropping any.
+  const keyCounts = new Map<string, number>()
+  for (const chunk of chunks) {
+    keyCounts.set(chunk.chunkKey, (keyCounts.get(chunk.chunkKey) ?? 0) + 1)
+  }
+  for (const chunk of chunks) {
+    if (keyCounts.get(chunk.chunkKey)! > 1) {
+      const [startColumn, endColumn] = columns.get(chunk)!
+      chunk.chunkKey += `:${startColumn}:${endColumn}`
+    }
   }
 
   tree.delete()
